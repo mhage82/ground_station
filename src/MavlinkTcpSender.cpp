@@ -262,6 +262,53 @@ bool MavlinkTcpSender::sendManualControl(const FlightCommand& command)
     return result;
 }
 
+bool MavlinkTcpSender::sendSetMode(uint32_t customMode)
+{
+    mavlink_message_t message {};
+
+    constexpr uint8_t targetSystem = 1;
+
+    mavlink_msg_set_mode_pack(
+        systemId,
+        componentId,
+        &message,
+        targetSystem,
+        MAV_MODE_FLAG_CUSTOM_MODE_ENABLED,
+        customMode
+    );
+
+    std::cout << "Sending SET_MODE custom_mode=" << customMode << "\n";
+    return sendMavlinkMessage(message);
+}
+
+bool MavlinkTcpSender::sendArmDisarm(bool arm)
+{
+    mavlink_message_t message {};
+
+    constexpr uint8_t targetSystem = 1;
+    constexpr uint8_t targetComponent = 1;
+
+    mavlink_msg_command_long_pack(
+        systemId,
+        componentId,
+        &message,
+        targetSystem,
+        targetComponent,
+        MAV_CMD_COMPONENT_ARM_DISARM,
+        0,
+        arm ? 1.0f : 0.0f,
+        0.0f,
+        0.0f,
+        0.0f,
+        0.0f,
+        0.0f,
+        0.0f
+    );
+
+    std::cout << "Sending " << (arm ? "ARM" : "DISARM") << " command\n";
+    return sendMavlinkMessage(message);
+}
+
 void MavlinkTcpSender::setReceiveNonBlocking(bool enabled)
 {
     if (socketFd < 0)

@@ -58,6 +58,9 @@ void FlightCommandPublisher::run(std::atomic<bool>& running, int publishRateHz)
     FlightCommand previousCommand;
     bool havePreviousCommand = false;
 
+    bool lastArmRequested = false;
+    bool lastDisarmRequested = false;
+
     while (running.load())
     {
         FlightCommand command = sharedCommand.get();
@@ -72,6 +75,19 @@ void FlightCommandPublisher::run(std::atomic<bool>& running, int publishRateHz)
         }
 
         heartbeatCounter--;
+
+        if (command.armRequested && !lastArmRequested)
+        {
+            mavlinkSender.sendSetMode(0);       // ArduCopter STABILIZE
+            mavlinkSender.sendArmDisarm(true);
+        }
+        lastArmRequested = command.armRequested;
+
+        if (command.disarmRequested && !lastDisarmRequested)
+        {
+            mavlinkSender.sendArmDisarm(false);
+        }
+        lastDisarmRequested = command.disarmRequested;
 
         // mavlinkSender.sendRcOverride(channels);
         mavlinkSender.sendManualControl(command);

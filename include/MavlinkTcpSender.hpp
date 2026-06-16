@@ -23,6 +23,8 @@ public:
     bool sendHeartbeat();
     bool sendRcOverride(const RcChannels& channels);
     bool sendManualControl(const FlightCommand& command);
+    bool sendSetMode(uint32_t customMode);
+    bool sendArmDisarm(bool arm);
     bool receiveAndPrintTelemetryOnce();
     void setReceiveNonBlocking(bool enabled);
     bool requestMessageInterval(uint32_t messageId, double rateHz);
