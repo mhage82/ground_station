@@ -13,7 +13,11 @@ private:
     bool previousDisarmCombo = false;
     bool previousTakeoffButton = false;
     bool previousLandButton = false;
+    bool previousFlipCombo = false;
     bool previousEmergencyButton = false;
+
+    bool previousPrecisionMode = false;
+    double precisionBaseThrottle = 0.0;
 
     static bool risingEdge(bool previous, bool current);
 };

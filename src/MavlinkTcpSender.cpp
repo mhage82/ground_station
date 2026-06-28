@@ -20,7 +20,8 @@ MavlinkTcpSender::MavlinkTcpSender(
       systemId(systemIdValue),
       componentId(componentIdValue),
       socketFd(-1),
-      isOpen(false)
+      isOpen(false),
+      landedState(MAV_LANDED_STATE_UNDEFINED)
 {
 }
 
@@ -309,6 +310,85 @@ bool MavlinkTcpSender::sendArmDisarm(bool arm)
     return sendMavlinkMessage(message);
 }
 
+bool MavlinkTcpSender::sendTakeoff(float altitudeMeters)
+{
+    mavlink_message_t message {};
+
+    constexpr uint8_t targetSystem = 1;
+    constexpr uint8_t targetComponent = 1;
+
+    mavlink_msg_command_long_pack(
+        systemId,
+        componentId,
+        &message,
+        targetSystem,
+        targetComponent,
+        MAV_CMD_NAV_TAKEOFF,
+        0,
+        0.0f,
+        0.0f,
+        0.0f,
+        0.0f,
+        0.0f,
+        0.0f,
+        altitudeMeters
+    );
+
+    std::cout << "Sending TAKEOFF command altitude_m=" << altitudeMeters << "\n";
+    return sendMavlinkMessage(message);
+}
+
+bool MavlinkTcpSender::sendEmergencyStop()
+{
+    mavlink_message_t terminationMessage {};
+    mavlink_message_t disarmMessage {};
+
+    constexpr uint8_t targetSystem = 1;
+    constexpr uint8_t targetComponent = 1;
+    constexpr float ardupilotForceDisarmMagic = 21196.0f;
+
+    mavlink_msg_command_long_pack(
+        systemId,
+        componentId,
+        &terminationMessage,
+        targetSystem,
+        targetComponent,
+        MAV_CMD_DO_FLIGHTTERMINATION,
+        0,
+        1.0f,
+        0.0f,
+        0.0f,
+        0.0f,
+        0.0f,
+        0.0f,
+        0.0f
+    );
+
+    mavlink_msg_command_long_pack(
+        systemId,
+        componentId,
+        &disarmMessage,
+        targetSystem,
+        targetComponent,
+        MAV_CMD_COMPONENT_ARM_DISARM,
+        0,
+        0.0f,
+        ardupilotForceDisarmMagic,
+        0.0f,
+        0.0f,
+        0.0f,
+        0.0f,
+        0.0f
+    );
+
+    std::cout << "Sending EMERGENCY STOP flight termination + force disarm\n";
+
+    const bool terminationSent = sendMavlinkMessage(terminationMessage);
+    const bool disarmSent = sendMavlinkMessage(disarmMessage);
+
+    return terminationSent && disarmSent;
+}
+
 void MavlinkTcpSender::setReceiveNonBlocking(bool enabled)
 {
     if (socketFd < 0)
@@ -390,6 +470,11 @@ bool MavlinkTcpSender::receiveAndPrintTelemetryOnce()
     return receivedAnyMessage;
 }
 
+bool MavlinkTcpSender::vehicleIsInAir() const
+{
+    return landedState.load() == MAV_LANDED_STATE_IN_AIR;
+}
+
 void MavlinkTcpSender::handleReceivedMessage(const mavlink_message_t& message)
 {
     switch (message.msgid)
@@ -428,16 +513,16 @@ void MavlinkTcpSender::handleReceivedMessage(const mavlink_message_t& message)
             mavlink_rc_channels_t rc;
             mavlink_msg_rc_channels_decode(&message, &rc);
 
-            std::cout << "RX RC_CHANNELS: "
-                      << "ch1=" << rc.chan1_raw
-                      << " ch2=" << rc.chan2_raw
-                      << " ch3=" << rc.chan3_raw
-                      << " ch4=" << rc.chan4_raw
-                      << " ch5=" << rc.chan5_raw
-                      << " ch6=" << rc.chan6_raw
-                      << " ch7=" << rc.chan7_raw
-                      << " ch8=" << rc.chan8_raw
-                      << "\n";
+            // std::cout << "RX RC_CHANNELS: "
+            //           << "ch1=" << rc.chan1_raw
+            //           << " ch2=" << rc.chan2_raw
+            //           << " ch3=" << rc.chan3_raw
+            //           << " ch4=" << rc.chan4_raw
+            //           << " ch5=" << rc.chan5_raw
+            //           << " ch6=" << rc.chan6_raw
+            //           << " ch7=" << rc.chan7_raw
+            //           << " ch8=" << rc.chan8_raw
+            //           << "\n";
             break;
         }
 
@@ -485,6 +570,23 @@ void MavlinkTcpSender::handleReceivedMessage(const mavlink_message_t& message)
             break;
         }
 
+        case MAVLINK_MSG_ID_EXTENDED_SYS_STATE:
+        {
+            mavlink_extended_sys_state_t state;
+            mavlink_msg_extended_sys_state_decode(&message, &state);
+
+            const int previousLandedState = landedState.exchange(state.landed_state);
+
+            if (previousLandedState != state.landed_state)
+            {
+                std::cout << "RX EXTENDED_SYS_STATE: "
+                          << "landed_state=" << static_cast<int>(state.landed_state)
+                          << "\n";
+            }
+
+            break;
+        }
+
         case MAVLINK_MSG_ID_SYS_STATUS:
         {
             mavlink_sys_status_t sys;
@@ -503,10 +605,10 @@ void MavlinkTcpSender::handleReceivedMessage(const mavlink_message_t& message)
             mavlink_command_ack_t ack;
             mavlink_msg_command_ack_decode(&message, &ack);
 
-            // std::cout << "RX COMMAND_ACK: "
-            //         << "command=" << ack.command
-            //         << " result=" << static_cast<int>(ack.result)
-            //         << "\n";
+            std::cout << "RX COMMAND_ACK: "
+                      << "command=" << ack.command
+                      << " result=" << static_cast<int>(ack.result)
+                      << "\n";
             break;
         }
         default:
@@ -572,6 +674,7 @@ bool MavlinkTcpSender::requestDefaultTelemetryStreams()
     ok = requestMessageInterval(MAVLINK_MSG_ID_VFR_HUD, 5.0) && ok;
     ok = requestMessageInterval(MAVLINK_MSG_ID_SYS_STATUS, 2.0) && ok;
     ok = requestMessageInterval(MAVLINK_MSG_ID_LOCAL_POSITION_NED, 5.0) && ok;
+    ok = requestMessageInterval(MAVLINK_MSG_ID_EXTENDED_SYS_STATE, 5.0) && ok;
     ok = requestDataStream(MAV_DATA_STREAM_ALL, 10, true) && ok;
 
     return ok;

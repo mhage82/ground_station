@@ -6,6 +6,26 @@
 namespace
 {
     constexpr double DEAD_BAND = 0.08;
+    constexpr double DOMINANT_AXIS_THRESHOLD = 0.35;
+    constexpr double CROSS_AXIS_DEAD_BAND = 0.35;
+
+    void applyCrossAxisDeadBand(double& firstAxis, double& secondAxis)
+    {
+        const double firstAbs = std::abs(firstAxis);
+        const double secondAbs = std::abs(secondAxis);
+
+        if (firstAbs >= DOMINANT_AXIS_THRESHOLD &&
+            secondAbs <= CROSS_AXIS_DEAD_BAND)
+        {
+            secondAxis = 0.0;
+        }
+
+        if (secondAbs >= DOMINANT_AXIS_THRESHOLD &&
+            firstAbs <= CROSS_AXIS_DEAD_BAND)
+        {
+            firstAxis = 0.0;
+        }
+    }
 }
 
 ControllerMapper::ControllerMapper()
@@ -103,11 +123,18 @@ void ControllerMapper::updateCommand()
 {
     const RawAxes& axes = state.rawAxes;
 
-    state.command.moveLeftRight = normalizeAxis(axes.absRx, false);
-    state.command.moveForwardBack = normalizeAxis(axes.absRy, true);
+    double moveLeftRight = normalizeAxis(axes.absRx, true);
+    double moveForwardBack = normalizeAxis(axes.absRy, true);
+    double yaw = normalizeAxis(axes.absX, false);
+    double altitude = normalizeAxis(axes.absY, true);
 
-    state.command.yaw = normalizeAxis(axes.absX, false);
-    state.command.altitude = normalizeAxis(axes.absY, true);
+    applyCrossAxisDeadBand(moveLeftRight, moveForwardBack);
+    applyCrossAxisDeadBand(yaw, altitude);
+
+    state.command.moveLeftRight = moveLeftRight;
+    state.command.moveForwardBack = moveForwardBack;
+    state.command.yaw = yaw;
+    state.command.altitude = altitude;
 
     state.command.l2 = normalizeTrigger(axes.absZ);
     state.command.r2 = normalizeTrigger(axes.absRz);

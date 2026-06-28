@@ -1,5 +1,10 @@
 #include "FlightCommandToRcMapper.hpp"
 
+namespace
+{
+    constexpr int RC_OVERRIDE_IGNORE = 65535;
+}
+
 double FlightCommandToRcMapper::clamp(double value, double minValue, double maxValue)
 {
     if (value < minValue)
@@ -38,23 +43,12 @@ RcChannels FlightCommandToRcMapper::map(const FlightCommand& command) const
     channels.ch3Throttle = mapThrottleToPwm(command.throttle);
     channels.ch4Yaw = mapCenteredAxisToPwm(command.yaw);
 
-    // Placeholder mode channel.
-    // Later this can select Stabilize/AltHold/Loiter/etc. in ArduPilot.
-    if (command.controlMode == "simple")
-    {
-        channels.ch5Mode = 1000;
-    }
-    else
-    {
-        channels.ch5Mode = 1500;
-    }
-
-    // Placeholder aux channel.
-    // Use precision mode as a visible RC aux behavior for now.
-    channels.ch6Aux = command.precisionMode ? 2000 : 1000;
-
-    channels.ch7Aux = 0;
-    channels.ch8Aux = 0;
+    // Do not override mode/aux channels. ArduPilot commonly uses ch5 as the
+    // flight mode switch, which can fight SET_MODE if we keep forcing it.
+    channels.ch5Mode = RC_OVERRIDE_IGNORE;
+    channels.ch6Aux = RC_OVERRIDE_IGNORE;
+    channels.ch7Aux = RC_OVERRIDE_IGNORE;
+    channels.ch8Aux = RC_OVERRIDE_IGNORE;
 
     return channels;
 }

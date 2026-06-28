@@ -42,35 +42,32 @@ void CommandPrinter::printFlightCommand(const FlightCommand& command)
 {
     std::cout << std::fixed << std::setprecision(3);
 
-    std::cout << "{\n";
-    std::cout << "  \"flight_command\": {\n";
-    std::cout << "    \"control_mode\": \"" << command.controlMode << "\",\n";
-    std::cout << "    \"roll\": " << command.roll << ",\n";
-    std::cout << "    \"pitch\": " << command.pitch << ",\n";
-    std::cout << "    \"throttle\": " << command.throttle << ",\n";
-    std::cout << "    \"yaw\": " << command.yaw << ",\n";
-    std::cout << "    \"precision_mode\": " << command.precisionMode << ",\n";
-    std::cout << "    \"arm_requested\": " << command.armRequested << ",\n";
-    std::cout << "    \"disarm_requested\": " << command.disarmRequested << ",\n";
-    std::cout << "    \"takeoff_requested\": " << command.takeoffRequested << ",\n";
-    std::cout << "    \"land_requested\": " << command.landRequested << ",\n";
-    std::cout << "    \"emergency_stop_requested\": " << command.emergencyStopRequested << "\n";
-    std::cout << "  }\n";
-    std::cout << "}\n\n";
+    std::cout << "FLIGHT_COMMAND "
+              << "mode=" << command.controlMode
+              << " roll=" << command.roll
+              << " pitch=" << command.pitch
+              << " throttle=" << command.throttle
+              << " yaw=" << command.yaw
+              << " precision=" << command.precisionMode
+              << " arm=" << command.armRequested
+              << " disarm=" << command.disarmRequested
+              << " takeoff=" << command.takeoffRequested
+              << " land=" << command.landRequested
+              << " flip=" << command.flipRequested
+              << " emergency=" << command.emergencyStopRequested
+              << "\n";
 }
 
 void CommandPrinter::printRcChannels(const RcChannels& channels)
 {
-    std::cout << "{\n";
-    std::cout << "  \"rc_channels\": {\n";
-    std::cout << "    \"ch1_roll\": " << channels.ch1Roll << ",\n";
-    std::cout << "    \"ch2_pitch\": " << channels.ch2Pitch << ",\n";
-    std::cout << "    \"ch3_throttle\": " << channels.ch3Throttle << ",\n";
-    std::cout << "    \"ch4_yaw\": " << channels.ch4Yaw << ",\n";
-    std::cout << "    \"ch5_mode\": " << channels.ch5Mode << ",\n";
-    std::cout << "    \"ch6_aux\": " << channels.ch6Aux << ",\n";
-    std::cout << "    \"ch7_aux\": " << channels.ch7Aux << ",\n";
-    std::cout << "    \"ch8_aux\": " << channels.ch8Aux << "\n";
-    std::cout << "  }\n";
-    std::cout << "}\n\n";
+    std::cout << "RC_CHANNELS "
+              << "ch1_roll=" << channels.ch1Roll
+              << " ch2_pitch=" << channels.ch2Pitch
+              << " ch3_throttle=" << channels.ch3Throttle
+              << " ch4_yaw=" << channels.ch4Yaw
+              << " ch5_mode=" << channels.ch5Mode
+              << " ch6_aux=" << channels.ch6Aux
+              << " ch7_aux=" << channels.ch7Aux
+              << " ch8_aux=" << channels.ch8Aux
+              << "\n";
 }

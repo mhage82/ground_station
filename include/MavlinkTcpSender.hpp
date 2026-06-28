@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <string>
 #include <mavlink/v2.0/ardupilotmega/mavlink.h>
 #include "FlightCommand.hpp"
@@ -25,7 +26,10 @@ public:
     bool sendManualControl(const FlightCommand& command);
     bool sendSetMode(uint32_t customMode);
     bool sendArmDisarm(bool arm);
+    bool sendTakeoff(float altitudeMeters);
+    bool sendEmergencyStop();
     bool receiveAndPrintTelemetryOnce();
+    bool vehicleIsInAir() const;
     void setReceiveNonBlocking(bool enabled);
     bool requestMessageInterval(uint32_t messageId, double rateHz);
     bool requestDefaultTelemetryStreams();
@@ -41,6 +45,7 @@ private:
     bool isOpen;
 
     mavlink_status_t receiveStatus {};
+    std::atomic<int> landedState;
 
     bool sendMavlinkMessage(const mavlink_message_t& message);
     void handleReceivedMessage(const mavlink_message_t& message);

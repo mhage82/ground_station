@@ -13,6 +13,7 @@ struct FlightCommand
     bool disarmRequested = false;
     bool takeoffRequested = false;
     bool landRequested = false;
+    bool flipRequested = false;
     bool emergencyStopRequested = false;
 
     bool precisionMode = false;
